@@ -1,0 +1,72 @@
+from machine import Pin,PWM
+import time
+
+p0 = Pin(0, Pin.IN, Pin.PULL_UP)
+p2 = Pin(2, Pin.IN, Pin.PULL_UP)
+pwm14 = PWM(Pin(14), freq=50, duty=26)
+p16 = Pin(16, Pin.OUT, value=1)
+table = [0, 0.01746, 0.03492, 0.05241, 0.06993, 0.08749, 0.1051, 0.12278, 0.14054, 0.15838,
+         0.17633, 0.19438, 0.21256, 0.23087, 0.24933, 0.26795, 0.28675, 0.30573, 0.32492, 0.34433,
+         0.36397, 0.38386, 0.40403, 0.42447, 0.44523, 0.46631, 0.48773, 0.50953, 0.53171, 0.55431,
+         0.57735, 0.60086, 0.62487, 0.64941, 0.67451, 0.70021, 0.72654, 0.75355, 0.78129, 0.80978,
+         0.8391, 0.86929, 0.9004, 0.93252, 0.96569, 1, 1.03553, 1.07237, 1.11061, 1.15037,
+         1.19175, 1.2349, 1.27994, 1.32704, 1.37638, 1.42815, 1.48256, 1.53986, 1.60033, 1.66428,
+         1.73205, 1.80405, 1.88073, 1.96261, 2.0503, 2.14451, 2.24604, 2.35585, 2.47509, 2.60509,
+         2.74748, 2.90421, 3.07768, 3.27085, 3.48741, 3.73205, 4.01078, 4.33148, 4.70463, 5.14455,
+         5.67128, 6.31375, 7.11537, 8.14435, 9.51436, 11.43005, 14.30067, 19.08114, 28.63625,
+         57.28996, 999999]
+global delta
+global asymptotic_line
+s = 0.4
+global angle
+
+
+def detect_voice():
+    if p0.value() == p2.value():
+        pass
+    else:
+        start = time.ticks_us()
+        if p0.value() == 0:
+            while True:
+                if p2.value() == 0:
+                    delta = (time.ticks_diff(time.ticks_us(), start))/1000000
+                    print(delta)
+                    if 340 * delta >= s:
+                        print('数据错误：340*延迟>s')
+                        break
+                    else:
+                        asymptotic_line = pow((0.25 * s * s - 28900 * delta * delta), 0.5) / 170 / delta
+                    for i in range(91):
+                        if asymptotic_line <= table[i]:
+                            break
+
+                    print('延迟为' + str(delta) + '秒')
+                    print('斜率为' + str(asymptotic_line))
+                    print('角度为' + str(i))
+                    pwm14.duty(int((i/18 + 2.5)/100*1024))
+                    time.sleep(0.2)
+                    break
+        if p2.value() == 0:
+            while True:
+                if p0.value() == 0:
+                    delta = (time.ticks_diff(time.ticks_us(), start))/1000000
+                    print(delta)
+                    if 340 * delta >= s:
+                        print('数据错误：340*延迟>s')
+                        break
+                    else:
+                        asymptotic_line = pow((0.25 * s * s - 28900 * delta * delta), 0.5) / 170 / delta
+                    for i in range(91):
+                        if asymptotic_line <= table[i]:
+                            break
+
+                    print('延迟为' + str(delta) + '秒')
+                    print('斜率为' + str(asymptotic_line))
+                    print('角度为' + str(180-i))
+                    pwm14.duty(int(((180-i)/18 + 2.5)/100*1024))
+                    time.sleep(0.2)
+                    break
+while True:
+    detect_voice()
+    
+
